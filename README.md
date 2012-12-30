@@ -1,4 +1,4 @@
 nextloader
 ==========
 
-A next powerfull Loader for ActionScript 3.0.
+A powerful Loader for ActionScript 3.0.
