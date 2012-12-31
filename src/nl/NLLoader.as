@@ -12,13 +12,13 @@ package nl {
 	import flash.system.SecurityDomain;
 
 	public class NLLoader extends EventDispatcher {
-		private var nlOption:NLOption;
+		private var nlOptions:Array;
 		private var loader:Loader;
 		public var Priority:int;
 		
 		public function NLLoader(p_option:NLOption) {
 			loader = new Loader;
-			nlOption = p_option;
+			nlOptions = [p_option];
 			Priority = p_option.Priority;
 			initLoadEvent();
 		}
@@ -60,15 +60,24 @@ package nl {
 					break;
 			}
 		}
-		
 
 		///////////////////////////////////
 		// public methods
 		///////////////////////////////////
 		
-		public function getOption():NLOption
+		public function AppendOption(p_option:NLOption):void
 		{
-			return nlOption;
+			nlOptions.push(p_option);
+		}
+		
+		public function GetFirst():NLOption
+		{
+			return nlOptions[0];
+		}
+		
+		public function GetOptions():Array
+		{
+			return nlOptions;
 		}
 		
 		public function Load():void 	{
@@ -77,6 +86,8 @@ package nl {
 			if (Security.sandboxType == Security.REMOTE) {
 				context.securityDomain = SecurityDomain.currentDomain;
 			}
+			
+			var nlOption:NLOption = nlOptions[0];
 			
 			switch (nlOption.Target) {
 				case NLOption.TARGET_CHILD:

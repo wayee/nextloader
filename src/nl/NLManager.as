@@ -4,7 +4,7 @@ package nl {
 	import flash.events.ProgressEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.utils.Dictionary;
-	
+	import flash.utils.getTimer;
 
 	/**
 	 * 加载管理器
@@ -17,36 +17,51 @@ package nl {
 	 * 
 	 */
 	public class NLManager {
+		static private const OUTDATE_INTERVAL:uint = 60*1000;	// 1分钟过期
 		static private var waitingSequeue:Array = [];
+		static private var loaderDict:Dictionary = new Dictionary;
 		static private var loaderCache:Dictionary = new Dictionary;
 		static private var isLoading:Boolean = false;
+		static private var lastTime:uint;
 		
 		static private function loaderEventHandler(e:Event):void {
 			var type:String = e.type;
 			var nlLoader:NLLoader = e.target as NLLoader;
-			var nlOption:NLOption = nlLoader.getOption();
+			var nlOptions:Array = nlLoader.GetOptions();
+			var len:int = nlOptions.length;
+			var nlOption:NLOption;
+			var i:int;
 			switch (type) {
 				case Event.COMPLETE:
-					if (nlOption.CompleteHandler != null) {
-						nlOption.EventObject = e;
-						nlOption.CompleteHandler(nlOption);
+					for (i=0; i<len; i++) {
+						nlOption = nlOptions[i] as NLOption;
+						if (nlOption.CompleteHandler != null) {
+							nlOption.EventObject = e;
+							nlOption.CompleteHandler(nlOption);
+						}
 					}
 					loaderCache[nlOption.Url] = 1;
 					removeLoadEvent(nlLoader);
 					loadNext();
 					break;
 				case ProgressEvent.PROGRESS:
-					if (nlOption.ProgressHandler != null) {
-						nlOption.EventObject = e;
-						nlOption.ProgressHandler(nlOption);
+					for (i=0; i<len; i++) {
+						nlOption = nlOptions[i] as NLOption;
+						if (nlOption.ProgressHandler != null) {
+							nlOption.EventObject = e;
+							nlOption.ProgressHandler(nlOption);
+						}
 					}
 					break;
 				case IOErrorEvent.IO_ERROR:
 				case SecurityErrorEvent.SECURITY_ERROR:
-					trace("NLManager: loading " + nlOption.Url + " error.");
-					if (nlOption.ErrorHandler != null) {
-						nlOption.EventObject = e;
-						nlOption.ErrorHandler(nlOption);
+					for (i=0; i<len; i++) {
+						nlOption = nlOptions[i] as NLOption;
+						trace("NLManager: loading " + nlOption.Url + " error.");
+						if (nlOption.ErrorHandler != null) {
+							nlOption.EventObject = e;
+							nlOption.ErrorHandler(nlOption);
+						}
 					}
 					removeLoadEvent(nlLoader);
 					loadNext();
@@ -76,7 +91,7 @@ package nl {
 			if (waitingSequeue.length > 0) {
 				isLoading = true;
 				var loader:NLLoader = waitingSequeue.shift() as NLLoader;
-				loaderCache[loader.getOption().Url] = 0;
+				loaderCache[loader.GetFirst().Url] = 0;
 				initLoadEvent(loader);
 				loader.Load();
 			} else {
@@ -108,15 +123,18 @@ package nl {
 							nlOption.CompleteHandler(nlOption.CompleteHandlerParam);
 						}
 					} else { // not complete
+						nlLoader = loaderDict[nlOption.Url] as NLLoader;
+						nlLoader.AppendOption(nlOption);
 					}
 				} else {
 					nlLoader = new NLLoader(nlOption);
 					waitingSequeue.push(nlLoader);
+					loaderDict[nlOption.Url] = nlLoader;
 				}
 			}
 			waitingSequeue.sortOn("Priority", Array.NUMERIC|Array.DESCENDING);
 			
-			if ( !isLoading ) {
+			if ( !isLoading || (getTimer() - lastTime) >= OUTDATE_INTERVAL ) {
 				loadNext();
 			}
 		}
@@ -136,6 +154,8 @@ package nl {
 							nlOption.CompleteHandler(nlOption.CompleteHandlerParam);
 						}
 					} else { // not complete
+						nlLoader = loaderDict[nlOption.Url] as NLLoader;
+						nlLoader.AppendOption(nlOption);
 					}
 				} else {
 					nlLoader = new NLLoader(nlOption);
