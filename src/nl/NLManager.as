@@ -35,12 +35,12 @@ package nl {
 				case Event.COMPLETE:
 					for (i=0; i<len; i++) {
 						nlOption = nlOptions[i] as NLOption;
+						loaderCache[nlOption.Url] = 1;
 						if (nlOption.CompleteHandler != null) {
 							nlOption.EventObject = e;
 							nlOption.CompleteHandler(nlOption);
 						}
 					}
-					loaderCache[nlOption.Url] = 1;
 					removeLoadEvent(nlLoader);
 					loadNext();
 					break;
@@ -132,8 +132,9 @@ package nl {
 					loaderDict[nlOption.Url] = nlLoader;
 				}
 			}
-			waitingSequeue.sortOn("Priority", Array.NUMERIC|Array.DESCENDING);
-			
+			if (waitingSequeue.length > 1) {
+				waitingSequeue.sortOn("Priority", Array.NUMERIC|Array.DESCENDING);
+			}
 			if ( !isLoading || (getTimer() - lastTime) >= OUTDATE_INTERVAL ) {
 				loadNext();
 			}
